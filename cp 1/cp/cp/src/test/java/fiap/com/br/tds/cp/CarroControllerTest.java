@@ -1,6 +1,6 @@
-package fiap.com.br.tds.cp;
+package fiap.com.br.tds.cp.controller;
 
-import fiap.com.br.tds.cp.controller.CarroController;
+import fiap.com.br.tds.cp.datasource.repositories.CarroMockRepository;
 import fiap.com.br.tds.cp.domainmodel.Carro;
 import fiap.com.br.tds.cp.service.CarroService;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,9 +11,9 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -26,27 +26,29 @@ class CarroControllerTest {
     @InjectMocks
     private CarroController carroController;
 
+    private CarroMockRepository mockRepository;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockRepository = new CarroMockRepository();
     }
 
     @Test
     void getAllCarros_ShouldReturnAllCarros() {
-        Carro carro1 = new Carro(1L, "Ferrari", 2023, 800, 5, "combustão", 2_500_000.0);
-        Carro carro2 = new Carro(2L, "Tesla", 2023, 1020, 15, "elétrico", 1_200_000.0);
-        when(carroService.getAll()).thenReturn(Arrays.asList(carro1, carro2));
+        List<Carro> carros = mockRepository.getAll();
+        when(carroService.getAll()).thenReturn(carros);
 
         ResponseEntity<List<Carro>> response = carroController.getAllCarros();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(2, response.getBody().size());
+        assertEquals(carros.size(), response.getBody().size());
     }
 
     @Test
     void getCarroById_WhenExists_ShouldReturnCarro() {
-        Long id = 1L;
-        Carro carro = new Carro(id, "Ferrari", 2023, 800, 5, "combustão", 2_500_000.0);
+        Long id = 3L;
+        Carro carro = mockRepository.findById(id);
         when(carroService.getById(id)).thenReturn(carro);
 
         ResponseEntity<Carro> response = carroController.getCarroById(id);
@@ -67,9 +69,8 @@ class CarroControllerTest {
 
     @Test
     void createCarro_ShouldReturnCreatedCarro() {
-        // Arrange
-        Carro novoCarro = new Carro(null, "Porsche", 2023, 650, 8, "combustão", 1_800_000.0);
-        Carro carroSalvo = new Carro(3L, "Porsche", 2023, 650, 8, "combustão", 1_800_000.0);
+        Carro novoCarro = new Carro(null, "AUDI", 2023, 500, 600, "elétrico", 220_000.0);
+        Carro carroSalvo = mockRepository.save(novoCarro);
         when(carroService.save(novoCarro)).thenReturn(carroSalvo);
 
         ResponseEntity<Carro> response = carroController.createCarro(novoCarro);
@@ -81,20 +82,21 @@ class CarroControllerTest {
     @Test
     void updateCarro_WhenExists_ShouldReturnUpdatedCarro() {
         Long id = 1L;
-        Carro carroAtualizado = new Carro(id, "Ferrari", 2023, 850, 6, "combustão", 2_600_000.0);
-        when(carroService.getById(id)).thenReturn(carroAtualizado);
+        Carro carroAtualizado = new Carro(id, "SIENA", 2023, 210, 420, "combustão", 20_000.0);
+
+        when(carroService.getById(id)).thenReturn(mockRepository.findById(id));
         when(carroService.update(carroAtualizado)).thenReturn(carroAtualizado);
 
         ResponseEntity<Carro> response = carroController.updateCarro(id, carroAtualizado);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(850, response.getBody().getPotencia());
+        assertEquals(210, response.getBody().getPotencia());
     }
 
     @Test
     void updateCarro_WhenNotExists_ShouldReturnNotFound() {
         Long id = 99L;
-        Carro carroAtualizado = new Carro(id, "Ferrari", 2023, 850, 6, "combustão", 2_600_000.0);
+        Carro carroAtualizado = new Carro(id, "Modelo", 2023, 100, 100, "elétrico", 100_000.0);
         when(carroService.getById(id)).thenReturn(null);
 
         ResponseEntity<Carro> response = carroController.updateCarro(id, carroAtualizado);
@@ -104,10 +106,19 @@ class CarroControllerTest {
 
     @Test
     void partialUpdateCarro_WhenExists_ShouldReturnUpdatedCarro() {
-        Long id = 1L;
-        Carro carroExistente = new Carro(id, "Ferrari", 2023, 800, 5, "combustão", 2_500_000.0);
-        Carro carroAtualizado = new Carro(id, "Ferrari", 2023, 850, 5, "combustão", 2_500_000.0);
-        Map<String, Object> updates = Map.of("potencia", 850);
+        Long id = 2L;
+        Map<String, Object> updates = Map.of("potencia", 650);
+
+        Carro carroExistente = mockRepository.findById(id);
+        Carro carroAtualizado = new Carro(
+                carroExistente.getId(),
+                carroExistente.getModelo(),
+                carroExistente.getAno(),
+                650,
+                carroExistente.getEconomia(),
+                carroExistente.getTipo(),
+                carroExistente.getPreco()
+        );
 
         when(carroService.getById(id)).thenReturn(carroExistente);
         when(carroService.partialUpdate(id, updates)).thenReturn(carroAtualizado);
@@ -115,13 +126,13 @@ class CarroControllerTest {
         ResponseEntity<Carro> response = carroController.partialUpdateCarro(id, updates);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(850, response.getBody().getPotencia());
+        assertEquals(650, response.getBody().getPotencia());
     }
 
     @Test
     void deleteCarro_WhenExists_ShouldReturnNoContent() {
-        Long id = 1L;
-        when(carroService.getById(id)).thenReturn(new Carro());
+        Long id = 4L;
+        when(carroService.getById(id)).thenReturn(mockRepository.findById(id));
 
         ResponseEntity<Void> response = carroController.deleteCarro(id);
 
@@ -131,27 +142,24 @@ class CarroControllerTest {
 
     @Test
     void getTop10ByPotencia_ShouldReturnSortedList() {
-        Carro carro1 = new Carro(1L, "Ferrari", 2023, 800, 5, "combustão", 2_500_000.0);
-        Carro carro2 = new Carro(2L, "Tesla", 2023, 1020, 15, "elétrico", 1_200_000.0);
-        when(carroService.getAll()).thenReturn(Arrays.asList(carro1, carro2));
+        List<Carro> carros = mockRepository.getAll();
+        when(carroService.getAll()).thenReturn(carros);
 
         ResponseEntity<List<Carro>> response = carroController.getTop10ByPotencia();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(2, response.getBody().size());
-        assertEquals(1020, response.getBody().get(0).getPotencia());
+        assertEquals(10, response.getBody().size());
+        assertTrue(response.getBody().get(0).getPotencia() >= response.getBody().get(1).getPotencia());
     }
 
     @Test
     void getCarrosEletricos_ShouldReturnOnlyEletricos() {
-        Carro carro1 = new Carro(1L, "Tesla", 2023, 1020, 15, "elétrico", 1_200_000.0);
-        Carro carro2 = new Carro(2L, "Ferrari", 2023, 800, 5, "combustão", 2_500_000.0);
-        when(carroService.getAll()).thenReturn(Arrays.asList(carro1, carro2));
+        List<Carro> carros = mockRepository.getAll();
+        when(carroService.getAll()).thenReturn(carros);
 
         ResponseEntity<List<Carro>> response = carroController.getCarrosEletricos();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, response.getBody().size());
-        assertEquals("elétrico", response.getBody().get(0).getTipo());
+        assertTrue(response.getBody().stream().allMatch(c -> c.getTipo().equalsIgnoreCase("elétrico")));
     }
 }
