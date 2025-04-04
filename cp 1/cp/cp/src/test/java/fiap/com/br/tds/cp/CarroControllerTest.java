@@ -1,5 +1,6 @@
-package fiap.com.br.tds.cp.controller;
+package fiap.com.br.tds.cp;
 
+import fiap.com.br.tds.cp.controller.CarroController;
 import fiap.com.br.tds.cp.domainmodel.Carro;
 import fiap.com.br.tds.cp.service.CarroService;
 import org.junit.jupiter.api.BeforeEach;
