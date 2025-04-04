@@ -2,8 +2,6 @@ package fiap.com.br.tds.cp.controller;
 
 import fiap.com.br.tds.cp.domainmodel.Carro;
 import fiap.com.br.tds.cp.service.CarroService;
-import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,73 +11,92 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/carros")
-@AllArgsConstructor
 public class CarroController {
 
-    @Autowired
-    private CarroService service;
+    private final CarroService carroService;
 
-    @GetMapping("/")
-    public ResponseEntity<List<Carro>> listAll() {
-
-        return new ResponseEntity<>(
-                this.service.getAll(),
-                HttpStatus.OK
-        );
-
+    public CarroController(CarroService carroService) {
+        this.carroService = carroService;
     }
 
-    //http://localhost:8080/api/{id}
+    @GetMapping
+    public ResponseEntity<List<Carro>> getAllCarros() {
+        List<Carro> carros = carroService.getAll();
+        return new ResponseEntity<>(carros, HttpStatus.OK);
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Carro> findById( @PathVariable("id") Long id){
-        System.out.println("http://localhost:8080/api/" + id);
-        Carro emp = this.service.getById(id);
-        if(emp == null)
+    public ResponseEntity<Carro> getCarroById(@PathVariable Long id) {
+        Carro carro = carroService.getById(id);
+        if (carro != null) {
+            return new ResponseEntity<>(carro, HttpStatus.OK);
+        } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        else
-            return new ResponseEntity<>(emp, HttpStatus.OK);
+        }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> removeEmployeeById(@PathVariable Long id ) {
-        this.service.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/hello")
-    public ResponseEntity<String> helloWorld(){
-        return new ResponseEntity<String>("Hello World RESTFULL manner!!!", HttpStatus.OK);
-    }
-
-    @GetMapping("/hello2")
-    public String helloWorld2(){
-        return "Hello World RESTFULL manner22222222!!!";
-
-
+    @PostMapping
+    public ResponseEntity<Carro> createCarro(@RequestBody Carro carro) {
+        Carro novoCarro = carroService.save(carro);
+        return new ResponseEntity<>(novoCarro, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Carro> updateCarro(@PathVariable Long id, @RequestBody Carro carro){
-        Carro databaseCarro = this.service.getById(id);
-        databaseCarro.setMarca(carro.getMarca());
-        databaseCarro.setAno(carro.getAno());
-        databaseCarro.setPotencia(carro.getPotencia());
-        databaseCarro.setEconomia(carro.getEconomia());
-        databaseCarro.setTipo(carro.getTipo());
-        databaseCarro.setPreco(carro.getPreco());
-        this.service.update(databaseCarro);
-        return new ResponseEntity<>(databaseCarro, HttpStatus.OK);
+    public ResponseEntity<Carro> updateCarro(@PathVariable Long id, @RequestBody Carro carro) {
+        Carro existingCarro = carroService.getById(id);
+        if (existingCarro == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        carro.setId(id);
+        Carro updatedCarro = carroService.update(carro);
+        return new ResponseEntity<>(updatedCarro, HttpStatus.OK);
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Carro> patchEmployee(@PathVariable Long id, @RequestBody Map<String, Object> updates){
-        Carro updatedEmployee = this.service.partialUpdate(id, updates);
-        if( updatedEmployee != null ){
-            return new ResponseEntity<>(updatedEmployee, HttpStatus.OK);
-        }else{
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Carro> partialUpdateCarro(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        Carro existingCarro = carroService.getById(id);
+        if (existingCarro == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+
+        Carro updatedCarro = carroService.partialUpdate(id, updates);
+        return new ResponseEntity<>(updatedCarro, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCarro(@PathVariable Long id) {
+        Carro existingCarro = carroService.getById(id);
+        if (existingCarro == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        carroService.deleteById(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/potencia")
+    public ResponseEntity<List<Carro>> getTop10ByPotencia() {
+        List<Carro> carros = carroService.getAll();
+        carros.sort((c1, c2) -> Integer.compare(c2.getPotencia(), c1.getPotencia()));
+        List<Carro> top10 = carros.stream().limit(10).toList();
+        return new ResponseEntity<>(top10, HttpStatus.OK);
+    }
+
+    @GetMapping("/economia")
+    public ResponseEntity<List<Carro>> getTop10ByEconomia() {
+        List<Carro> carros = carroService.getAll();
+        carros.sort((c1, c2) -> Integer.compare(c2.getEconomia(), c1.getEconomia()));
+        List<Carro> top10 = carros.stream().limit(10).toList();
+        return new ResponseEntity<>(top10, HttpStatus.OK);
+    }
+
+    @GetMapping("/eletricos")
+    public ResponseEntity<List<Carro>> getCarrosEletricos() {
+        List<Carro> carros = carroService.getAll();
+        List<Carro> eletricos = carros.stream()
+                .filter(c -> "elétrico".equalsIgnoreCase(c.getTipo()))
+                .toList();
+        return new ResponseEntity<>(eletricos, HttpStatus.OK);
     }
 }
-
-

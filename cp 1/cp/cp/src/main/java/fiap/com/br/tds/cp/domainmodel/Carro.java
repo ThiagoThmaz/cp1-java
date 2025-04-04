@@ -23,6 +23,10 @@ public class Carro {
         this.preco = preco;
     }
 
+    public Carro() {
+
+    }
+
     public Long getId() {
         return id;
     }
