@@ -12,6 +12,7 @@ public class Carro {
     private int economia;
     private String tipo;
     private double preco;
+    private String modelo;
 
     public Carro(Long id, String marca, int ano, int potencia, int economia, String tipo, Double preco) {
         this.id = id;
@@ -107,5 +108,9 @@ public class Carro {
                 ", preco=" + preco +
                 ", id=" + id +
                 '}';
+    }
+
+    public String getModelo() {
+        return modelo;
     }
 }
